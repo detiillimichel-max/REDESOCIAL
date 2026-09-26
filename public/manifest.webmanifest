@@ -1,0 +1,10 @@
+{
+  "name": "RedeSOCIOLOCAL",
+  "short_name": "REDE",
+  "description": "Rede social de vídeos e conhecimento.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050607",
+  "theme_color": "#050607",
+  "lang": "pt-BR"
+}
