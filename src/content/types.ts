@@ -7,6 +7,7 @@ export type ContentSource =
   | "wikimedia"
   | "internet-archive"
   | "guardian"
+  | "peertube"
   | "future";
 
 export interface NormalizedContent {
