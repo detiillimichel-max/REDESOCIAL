@@ -10,6 +10,8 @@ RedeSOCIOLOCAL é uma PWA de vídeo social com identidade própria, construída 
 - Navegação principal reduzida a **Vídeos** e **Perfil**
 - Telegrafo permanece como módulo separado, acessado pelo ícone de chat
 - Estrutura preparada para cache, normalização, roteamento de conteúdo e enriquecimento por IA
+- Catálogo normalizado com deduplicação, expiração e estatísticas por fonte
+- Cache local como camada de aceleração; o catálogo central continuará sendo server-side
 - GitHub Actions para validação automática
 
 ## Composição planejada do feed
@@ -33,7 +35,10 @@ REDESOCIAL/
 ├── public/manifest.webmanifest
 ├── src/
 │   ├── content/
+│   │   ├── cache.ts
+│   │   ├── catalog.ts
 │   │   ├── content-router.ts
+│   │   ├── index.ts
 │   │   ├── qwen.ts
 │   │   ├── sources.ts
 │   │   └── types.ts
