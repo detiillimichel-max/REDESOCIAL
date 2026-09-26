@@ -18,7 +18,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Show tool versions
+        run: node --version && npm --version
 
       - name: Install dependencies
         run: npm install
