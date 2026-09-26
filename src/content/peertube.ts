@@ -11,6 +11,13 @@ export const PEERTUBE_INSTANCES: PeerTubeInstance[] = [
   { id: "peertube-2", baseUrl: "https://www.zappiens.br", enabled: true },
   { id: "peertube-3", baseUrl: "https://exatas.tv", enabled: true },
   { id: "peertube-4", baseUrl: "https://tv.terrapreta.org.br", enabled: true },
+  { id: "peertube-5", baseUrl: "https://videoteca.ibict.br", enabled: true },
+  { id: "peertube-6", baseUrl: "https://video.blender.org", enabled: true },
+  { id: "peertube-7", baseUrl: "https://peertube.cpy.re", enabled: true },
+  { id: "peertube-8", baseUrl: "https://video.pcgaldo.com", enabled: true },
+  // PEERTUBE_9 é a mesma instância informada em PEERTUBE_2.
+  { id: "peertube-10", baseUrl: "https://peertube.lhc.net.br", enabled: true },
+  // PEERTUBE_11 é a mesma instância informada em PEERTUBE_3.
 ];
 
 type PeerTubeVideo = {
