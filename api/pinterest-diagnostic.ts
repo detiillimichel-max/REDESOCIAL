@@ -4,10 +4,13 @@
  * Security:
  * - The Pinterest access token is read only from the Vercel environment.
  * - No token, Pin URLs, image URLs, titles, or user data are returned.
- * - This route is intentionally capped at two pages for the first diagnostic.
+ * - The first request is limited to one page; a second page is fetched only
+ *   when Pinterest explicitly returns a bookmark.
  *
  * Remove this route after the diagnostic is complete.
  */
+
+export const runtime = "nodejs";
 
 type PinterestPin = {
   id?: string;
@@ -27,10 +30,6 @@ type PinterestResponse = {
   bookmark?: string | null;
 };
 
-function headerValue(response: Response, name: string): string | null {
-  return response.headers.get(name);
-}
-
 function summarizeItems(items: PinterestPin[]) {
   return {
     total: items.length,
@@ -48,13 +47,8 @@ function summarizeItems(items: PinterestPin[]) {
   };
 }
 
-export default async function handler(request: Request): Promise<Response> {
-  if (request.method !== "GET") {
-    return Response.json(
-      { ok: false, error: "Method not allowed" },
-      { status: 405, headers: { Allow: "GET" } },
-    );
-  }
+export async function GET(request: Request): Promise<Response> {
+  void request;
 
   const token = process.env.PINTEREST_ACCESS_TOKEN;
 
@@ -80,17 +74,26 @@ export default async function handler(request: Request): Promise<Response> {
       url.searchParams.set("page_size", String(pageSize));
       if (bookmark) url.searchParams.set("bookmark", bookmark);
 
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
 
       lastRateLimit = {
-        limit: headerValue(response, "x-ratelimit-limit"),
-        remaining: headerValue(response, "x-ratelimit-remaining"),
-        reset: headerValue(response, "x-ratelimit-reset"),
+        limit: response.headers.get("x-ratelimit-limit"),
+        remaining: response.headers.get("x-ratelimit-remaining"),
+        reset: response.headers.get("x-ratelimit-reset"),
       };
 
       if (!response.ok) {
@@ -135,11 +138,15 @@ export default async function handler(request: Request): Promise<Response> {
       durationMs: Date.now() - startedAt,
       note: "Temporary diagnostic. No Pinterest content or token is returned.",
     });
-  } catch {
+  } catch (error) {
+    const aborted = error instanceof Error && error.name === "AbortError";
+
     return Response.json(
       {
         ok: false,
-        error: "Unexpected server error while calling Pinterest.",
+        error: aborted
+          ? "Pinterest API request timed out after 15 seconds."
+          : "Unexpected server error while calling Pinterest.",
         durationMs: Date.now() - startedAt,
       },
       { status: 502 },
