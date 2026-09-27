@@ -13,13 +13,20 @@ export async function GET(request: Request): Promise<Response> {
   // The NASA key stays server-side. Never expose it to the browser.
   const apiKey = process.env.NASA_API_KEY;
 
+  if (!apiKey) {
+    return Response.json(
+      { ok: false, source: "nasa", error: "NASA_API_KEY is not configured on the server." },
+      { status: 500 },
+    );
+  }
+
   try {
     const items = await fetchNasaApod({
       date,
       startDate,
       endDate,
       count,
-      apiKey: apiKey || undefined,
+      apiKey,
     });
 
     return Response.json({
