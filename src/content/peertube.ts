@@ -94,7 +94,6 @@ async function requestWithBackoff(url: URL, timeoutMs: number, maxRetries: numbe
   throw lastError instanceof Error ? lastError : new Error("PeerTube request failed");
 }
 
-/** Reads public videos from one validated PeerTube instance. Pagination uses start + count. */
 export async function fetchPeerTubeVideos(instance: PeerTubeInstance, options: PeerTubeFetchOptions = {}): Promise<NormalizedContent[]> {
   if (!instance.enabled) return [];
   const count = Math.min(Math.max(options.count ?? 20, 1), 100); const start = Math.max(options.start ?? 0, 0);
