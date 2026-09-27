@@ -10,6 +10,7 @@ export interface NaraQuery {
   page?: number;
   rows?: number;
   timeoutMs?: number;
+  apiKey?: string;
 }
 
 type NaraDigitalObject = {
@@ -115,6 +116,9 @@ function normalize(record: NaraRecord, object: NaraDigitalObject): NormalizedCon
  * IMPORTANT: NARA's current API terms say not to cache or store content
  * returned by the Catalog API. This adapter deliberately has no persistent
  * or in-memory response cache.
+ *
+ * The API key is supplied by the server route so this module remains
+ * environment-agnostic and does not reference Node globals.
  */
 export async function searchNaraVideos(query: NaraQuery = {}): Promise<NormalizedContent[]> {
   const page = Number.isInteger(query.page) ? Math.max(query.page ?? 1, 1) : 1;
@@ -129,7 +133,7 @@ export async function searchNaraVideos(query: NaraQuery = {}): Promise<Normalize
   url.searchParams.set("page", String(page));
   url.searchParams.set("rows", String(rows));
 
-  const apiKey = process.env.NARA_API_KEY;
+  const apiKey = query.apiKey?.trim();
   if (!apiKey) {
     throw new Error("NARA_API_KEY is not configured on the server.");
   }
