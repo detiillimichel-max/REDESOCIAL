@@ -166,17 +166,44 @@ async function searchNaraVideos(options: {
     const response = await fetch(url, {
       headers: {
         Accept: "application/json",
+        "Content-Type": "application/json",
         "x-api-key": options.apiKey,
       },
       cache: "no-store",
       signal: controller.signal,
     });
 
+    const contentType = response.headers.get("content-type") ?? "";
+    const responseUrl = response.url || url.toString();
+    const rawBody = await response.text();
+    const trimmedBody = rawBody.trim();
+
     if (!response.ok) {
-      throw new Error(`NARA Catalog API respondeu HTTP ${response.status}.`);
+      throw new Error(
+        `NARA Catalog API respondeu HTTP ${response.status} ${response.statusText} (content-type: ${contentType || "unknown"}, url: ${responseUrl}).`,
+      );
     }
 
-    const payload = (await response.json()) as NaraResponse;
+    if (!contentType.toLowerCase().includes("json") || !/^[\[{]/.test(trimmedBody)) {
+      const preview = trimmedBody
+        .slice(0, 160)
+        .replace(/\\s+/g, " ")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+      throw new Error(
+        `NARA retornou uma resposta não-JSON (HTTP ${response.status}, content-type: ${contentType || "unknown"}, url: ${responseUrl}, redirected: ${response.redirected}, preview: ${preview || "empty"}).`,
+      );
+    }
+
+    let payload: NaraResponse;
+    try {
+      payload = JSON.parse(trimmedBody) as NaraResponse;
+    } catch {
+      throw new Error(
+        `NARA retornou JSON inválido (HTTP ${response.status}, content-type: ${contentType || "unknown"}, url: ${responseUrl}).`,
+      );
+    }
     const hits = payload.body?.hits?.hits ?? [];
 
     return hits
