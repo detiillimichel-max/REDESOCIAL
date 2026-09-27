@@ -7,4 +7,5 @@ export const CONTENT_SOURCES = [
   { id: "wikimedia", name: "Wikimedia", enabled: true, feedWeight: null, requiresSecret: false },
   { id: "internet-archive", name: "Internet Archive", enabled: true, feedWeight: null, requiresSecret: false },
   { id: "guardian", name: "The Guardian", enabled: true, feedWeight: null, requiresSecret: true },
+  { id: "peertube", name: "PeerTube", enabled: true, feedWeight: null, requiresSecret: false },
 ] as const;
