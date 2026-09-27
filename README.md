@@ -10,13 +10,15 @@ RedeSOCIOLOCAL é uma PWA de vídeo social com identidade própria, construída 
 - Navegação principal reduzida a **Vídeos** e **Perfil**
 - Telegrafo permanece como módulo separado, acessado pelo ícone de chat
 - Estrutura preparada para cache, normalização, roteamento de conteúdo e enriquecimento por IA
+- Catálogo normalizado com deduplicação, expiração e estatísticas por fonte
+- Cache local como camada de aceleração; o catálogo central continuará sendo server-side
 - PeerTube preparado como fonte pública, com múltiplas instâncias configuráveis
 - GitHub Actions para validação automática
 
 ## Composição planejada do feed
 
 - **40% Pinterest**
-- **60% demais fontes**, incluindo NASA, NARA, Europeana, DPLA, Wikimedia, Internet Archive, Guardian e futuras APIs.
+- **60% demais fontes**, incluindo NASA, NARA, Europeana, DPLA, Wikimedia, Internet Archive, Guardian, PeerTube e futuras APIs.
 
 Essa proporção é do feed, não do tamanho do acervo de nenhuma fonte.
 
@@ -34,9 +36,12 @@ REDESOCIAL/
 ├── public/manifest.webmanifest
 ├── src/
 │   ├── content/
+│   │   ├── cache.ts
+│   │   ├── catalog.ts
 │   │   ├── content-router.ts
-│   │   ├── qwen.ts
+│   │   ├── index.ts
 │   │   ├── peertube.ts
+│   │   ├── qwen.ts
 │   │   ├── sources.ts
 │   │   └── types.ts
 │   ├── App.tsx
@@ -57,7 +62,7 @@ REDESOCIAL/
 1. validar o bootstrap;
 2. consolidar o sistema visual;
 3. criar o catálogo/cache normalizado;
-4. conectar as fontes uma por uma, começando pelo adaptador PeerTube;
+4. conectar as fontes uma por uma;
 5. implementar o roteador 40/60;
 6. integrar Qwen somente no lado seguro;
 7. integrar Supabase após a arquitetura estar validada;
