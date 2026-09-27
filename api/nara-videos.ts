@@ -10,6 +10,7 @@ export async function GET(request: Request): Promise<Response> {
       q: url.searchParams.get("q") ?? undefined,
       page: Number(url.searchParams.get("page") ?? "1"),
       rows: Number(url.searchParams.get("rows") ?? "10"),
+      apiKey: process.env.NARA_API_KEY,
     });
 
     return new Response(
