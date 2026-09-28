@@ -74,8 +74,42 @@ function App() {
 }
 
 function VideosView() {
+  const [naraStatus, setNaraStatus] = useState<"idle" | "testing" | "ok" | "error">("idle");
+  const [naraMessage, setNaraMessage] = useState("");
+
+  async function testarNara() {
+    setNaraStatus("testing");
+    setNaraMessage("Consultando NARA…");
+
+    try {
+      const response = await fetch("/api/nara-videos?control=1", { cache: "no-store" });
+      const data = await response.json();
+
+      if (data.ok === true) {
+        setNaraStatus("ok");
+        setNaraMessage("NARA funcionando — a API respondeu corretamente.");
+      } else {
+        setNaraStatus("error");
+        setNaraMessage(data.error || "NARA respondeu com erro.");
+      }
+    } catch {
+      setNaraStatus("error");
+      setNaraMessage("Não foi possível consultar a API NARA.");
+    }
+  }
+
   return (
     <section className="feed">
+      <div style={{ padding: "12px 16px" }}>
+        <button className="chip" onClick={testarNara} disabled={naraStatus === "testing"}>
+          {naraStatus === "testing" ? "Testando NARA…" : "Testar API NARA"}
+        </button>
+        {naraStatus !== "idle" && (
+          <p style={{ margin: "8px 0 0", fontSize: "0.82rem" }}>
+            {naraStatus === "ok" ? "🟢 " : naraStatus === "error" ? "🔴 " : "🟡 "}{naraMessage}
+          </p>
+        )}
+      </div>
       <div className="category-row">
         {["Para você", "Ciência", "Espaço", "Natureza"].map((item, index) => (
           <button className={index === 0 ? "chip selected" : "chip"} key={item}>
