@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bell,
   Bookmark,
@@ -74,42 +74,53 @@ function App() {
 }
 
 function VideosView() {
-  const [naraStatus, setNaraStatus] = useState<"idle" | "testing" | "ok" | "error">("idle");
-  const [naraMessage, setNaraMessage] = useState("");
+  type NaraItem = {
+    id: string;
+    title: string;
+    description?: string;
+    mediaUrl: string;
+    sourceUrl: string;
+    author?: string;
+    publishedAt?: string;
+  };
 
-  async function testarNara() {
-    setNaraStatus("testing");
-    setNaraMessage("Consultando NARA…");
+  const [naraItems, setNaraItems] = useState<NaraItem[]>([]);
+  const [naraState, setNaraState] = useState<"loading" | "ok" | "error">("loading");
 
-    try {
-      const response = await fetch("/api/nara-videos?control=1", { cache: "no-store" });
-      const data = await response.json();
+  useEffect(() => {
+    let active = true;
 
-      if (data.ok === true) {
-        setNaraStatus("ok");
-        setNaraMessage("NARA funcionando — a API respondeu corretamente.");
-      } else {
-        setNaraStatus("error");
-        setNaraMessage(data.error || "NARA respondeu com erro.");
+    async function loadNara() {
+      try {
+        const response = await fetch("/api/nara-videos?q=history&rows=10", {
+          cache: "no-store",
+        });
+        const data = await response.json();
+
+        if (!active) return;
+
+        if (response.ok && data.ok === true && Array.isArray(data.items)) {
+          setNaraItems(data.items);
+          setNaraState("ok");
+        } else {
+          setNaraItems([]);
+          setNaraState("error");
+        }
+      } catch {
+        if (!active) return;
+        setNaraItems([]);
+        setNaraState("error");
       }
-    } catch {
-      setNaraStatus("error");
-      setNaraMessage("Não foi possível consultar a API NARA.");
     }
-  }
+
+    loadNara();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <section className="feed">
-      <div style={{ padding: "12px 16px" }}>
-        <button className="chip" onClick={testarNara} disabled={naraStatus === "testing"}>
-          {naraStatus === "testing" ? "Testando NARA…" : "Testar API NARA"}
-        </button>
-        {naraStatus !== "idle" && (
-          <p style={{ margin: "8px 0 0", fontSize: "0.82rem" }}>
-            {naraStatus === "ok" ? "🟢 " : naraStatus === "error" ? "🔴 " : "🟡 "}{naraMessage}
-          </p>
-        )}
-      </div>
       <div className="category-row">
         {["Para você", "Ciência", "Espaço", "Natureza"].map((item, index) => (
           <button className={index === 0 ? "chip selected" : "chip"} key={item}>
@@ -118,38 +129,90 @@ function VideosView() {
         ))}
       </div>
 
-      <article className="video-card">
-        <img src={demoVideo.image} alt="Terra vista do espaço" />
-        <div className="video-overlay" />
-        <div className="video-content">
-          <div className="source-line">
-            <div className="source-avatar">N</div>
-            <div>
-              <strong>{demoVideo.source}</strong>
-              <small>Há 2 dias · fonte pública</small>
+      {naraItems.length > 0 ? (
+        naraItems.map((item) => (
+          <article className="video-card" key={item.id}>
+            <video
+              src={item.mediaUrl}
+              controls
+              playsInline
+              preload="metadata"
+              poster={demoVideo.image}
+              aria-label={item.title}
+            />
+            <div className="video-overlay" />
+            <div className="video-content">
+              <div className="source-line">
+                <div className="source-avatar">N</div>
+                <div>
+                  <strong>NARA</strong>
+                  <small>{item.author || "National Archives"} · fonte pública</small>
+                </div>
+              </div>
+              <h1>{item.title}</h1>
+              <p>{item.description || "Conteúdo audiovisual do National Archives Catalog."}</p>
+              <div className="tags">
+                <span>#NARA</span>
+                <span>#História</span>
+                <span>#NationalArchives</span>
+              </div>
+            </div>
+
+            <aside className="engagement">
+              <button aria-label="Curtir"><Heart /></button>
+              <small>0</small>
+              <button aria-label="Comentar"><MessageCircle /></button>
+              <small>0</small>
+              <button aria-label="Compartilhar"><Send /></button>
+              <small>0</small>
+              <button aria-label="Salvar"><Bookmark /></button>
+              <button aria-label="Mais opções"><MoreHorizontal /></button>
+            </aside>
+          </article>
+        ))
+      ) : (
+        <article className="video-card">
+          <img src={demoVideo.image} alt="Terra vista do espaço" />
+          <div className="video-overlay" />
+          <div className="video-content">
+            <div className="source-line">
+              <div className="source-avatar">N</div>
+              <div>
+                <strong>{demoVideo.source}</strong>
+                <small>Há 2 dias · fonte pública</small>
+              </div>
+            </div>
+            <h1>{demoVideo.title}</h1>
+            <p>{demoVideo.description}</p>
+            <div className="tags">
+              <span>#NASA</span>
+              <span>#Terra</span>
+              <span>#Espaço</span>
+              <span>#Ciência</span>
             </div>
           </div>
-          <h1>{demoVideo.title}</h1>
-          <p>{demoVideo.description}</p>
-          <div className="tags">
-            <span>#NASA</span>
-            <span>#Terra</span>
-            <span>#Espaço</span>
-            <span>#Ciência</span>
-          </div>
-        </div>
 
-        <aside className="engagement">
-          <button aria-label="Curtir"><Heart /></button>
-          <small>{demoVideo.likes}</small>
-          <button aria-label="Comentar"><MessageCircle /></button>
-          <small>{demoVideo.comments}</small>
-          <button aria-label="Compartilhar"><Send /></button>
-          <small>{demoVideo.shares}</small>
-          <button aria-label="Salvar"><Bookmark /></button>
-          <button aria-label="Mais opções"><MoreHorizontal /></button>
-        </aside>
-      </article>
+          <aside className="engagement">
+            <button aria-label="Curtir"><Heart /></button>
+            <small>{demoVideo.likes}</small>
+            <button aria-label="Comentar"><MessageCircle /></button>
+            <small>{demoVideo.comments}</small>
+            <button aria-label="Compartilhar"><Send /></button>
+            <small>{demoVideo.shares}</small>
+            <button aria-label="Salvar"><Bookmark /></button>
+            <button aria-label="Mais opções"><MoreHorizontal /></button>
+          </aside>
+        </article>
+      )}
+
+      {naraState === "loading" && (
+        <p style={{ padding: "12px 16px", opacity: 0.7 }}>Carregando conteúdos do NARA…</p>
+      )}
+      {naraState === "error" && (
+        <p style={{ padding: "12px 16px", opacity: 0.7 }}>
+          NARA indisponível no momento. O feed continua com as outras fontes.
+        </p>
+      )}
     </section>
   );
 }
