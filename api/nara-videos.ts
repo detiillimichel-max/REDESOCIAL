@@ -144,6 +144,7 @@ async function searchNaraVideos(options: {
   page?: number;
   rows?: number;
   apiKey: string;
+  control?: boolean;
 }): Promise<NormalizedNaraContent[]> {
   const page = Number.isInteger(options.page)
     ? Math.max(options.page ?? 1, 1)
@@ -153,11 +154,20 @@ async function searchNaraVideos(options: {
     : 10;
 
   const url = new URL(NARA_SEARCH_ENDPOINT);
-  url.searchParams.set("availableOnline", "true");
-  url.searchParams.set("typeOfMaterials", "Moving Images");
-  url.searchParams.set("q", options.q?.trim() || "video");
-  url.searchParams.set("page", String(page));
-  url.searchParams.set("rows", String(rows));
+  const isControlCall = options.control === true;
+
+  if (isControlCall) {
+    // Official NARA smoke-test shape: a minimal read-only search.
+    url.searchParams.set("q", "constitution");
+    url.searchParams.set("page", "1");
+    url.searchParams.set("rows", "1");
+  } else {
+    url.searchParams.set("availableOnline", "true");
+    url.searchParams.set("typeOfMaterials", "Moving Images");
+    url.searchParams.set("q", options.q?.trim() || "video");
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("rows", String(rows));
+  }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
@@ -166,17 +176,44 @@ async function searchNaraVideos(options: {
     const response = await fetch(url, {
       headers: {
         Accept: "application/json",
+        "Content-Type": "application/json",
         "x-api-key": options.apiKey,
       },
       cache: "no-store",
       signal: controller.signal,
     });
 
+    const contentType = response.headers.get("content-type") ?? "";
+    const responseUrl = response.url || url.toString();
+    const rawBody = await response.text();
+    const trimmedBody = rawBody.trim();
+
     if (!response.ok) {
-      throw new Error(`NARA Catalog API respondeu HTTP ${response.status}.`);
+      throw new Error(
+        `NARA Catalog API respondeu HTTP ${response.status} ${response.statusText} (content-type: ${contentType || "unknown"}, url: ${responseUrl}).`,
+      );
     }
 
-    const payload = (await response.json()) as NaraResponse;
+    if (!contentType.toLowerCase().includes("json") || !/^[\[{]/.test(trimmedBody)) {
+      const preview = trimmedBody
+        .slice(0, 160)
+        .replace(/\\s+/g, " ")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+      throw new Error(
+        `NARA retornou uma resposta não-JSON (HTTP ${response.status}, content-type: ${contentType || "unknown"}, url: ${responseUrl}, redirected: ${response.redirected}, preview: ${preview || "empty"}).`,
+      );
+    }
+
+    let payload: NaraResponse;
+    try {
+      payload = JSON.parse(trimmedBody) as NaraResponse;
+    } catch {
+      throw new Error(
+        `NARA retornou JSON inválido (HTTP ${response.status}, content-type: ${contentType || "unknown"}, url: ${responseUrl}).`,
+      );
+    }
     const hits = payload.body?.hits?.hits ?? [];
 
     return hits
@@ -225,11 +262,14 @@ export async function GET(request: Request): Promise<Response> {
     const rawPage = Number(url.searchParams.get("page") ?? "1");
     const rawRows = Number(url.searchParams.get("rows") ?? "10");
 
+    const control = url.searchParams.get("control") === "1";
+
     const items = await searchNaraVideos({
       q: url.searchParams.get("q") ?? undefined,
       page: Number.isFinite(rawPage) ? rawPage : 1,
       rows: Number.isFinite(rawRows) ? rawRows : 10,
       apiKey,
+      control,
     });
 
     return new Response(
@@ -237,6 +277,7 @@ export async function GET(request: Request): Promise<Response> {
         ok: true,
         source: "nara",
         endpoint: "catalog-api-v2",
+        control: url.searchParams.get("control") === "1",
         items,
         attributionNotice: ATTRIBUTION,
       }),
